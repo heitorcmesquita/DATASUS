@@ -1,0 +1,65 @@
+library(tidyverse)
+library(dplyr)
+library(hash)
+
+obitosInf <- function(ano, uf){
+  h <- hash()
+  h[['RO']] <- 11
+  h[['AC']] <- 12
+  h[['AM']] <- 13
+  h[['RR']] <- 14
+  h[['PA']] <- 15
+  h[['AP']] <- 16
+  h[['TO']] <- 17
+  h[['MA']] <- 21
+  h[['PI']] <- 22
+  h[['CE']] <- 23
+  h[['RN']] <- 24
+  h[['PB']] <- 25
+  h[['PE']] <- 26
+  h[['AL']] <- 27
+  h[['SE']] <- 28
+  h[['BA']] <- 29
+  h[['MG']] <- 31
+  h[['ES']] <- 32
+  h[['RJ']] <- 33
+  h[['SP']] <- 35
+  h[['PR']] <- 41
+  h[['SC']] <- 42
+  h[['RS']] <- 43
+  h[['MT']] <- 51
+  h[['GO']] <- 52
+  h[['DF']] <- 53
+  h[['MS']] <- 50
+  
+  url <- paste0('ftp://ftp.datasus.gov.br/dissemin/publicos/SIM/CID10/DOFET/DOINF', ano, '.dbc')
+  
+  temp <- tempfile()
+  download.file(url, temp, mode = "wb")
+  df <- read.dbc::read.dbc(temp)
+  
+  df$UF <- substr(df$CODMUNRES, 1, 2)
+  df <- subset(df, UF == h[[uf]])
+  df$IDADE_Fx <- cut(as.numeric(as.character(df$IDADEMAE)), breaks = c(0, 15, 17, 20, 23, 28, 32, 40, 50, Inf), labels = c('0-14', '15-16', '17-19', '20-22', '23-27', '28-31', '32-39', '40-50', '50+'))
+  df <- df %>% 
+    group_by(RACACOR, CODMUNRES, ESCMAE, IDADE_Fx) %>%
+    summarise(n())
+  colnames(df) <- c('Raca', 'Mun','Escolaridade', 'IdadeMae', 'Obitos')
+  df$ano <- ano
+  
+  return(df)
+}
+
+####################################
+ano <- c('14', '15', '16', '17', '18')
+obinf <- data.frame()
+
+for (i in ano){
+  df <- obitosInf(i, 'AL')
+  mortInf <- rbind(obinf, df)
+}
+
+write.csv(mortInf, "obitosInfantis.csv", row.names = FALSE)
+td <- googledrive::drive_get("https://drive.google.com/drive/u/1/folders/1ub18RCGe763AksCx4DOOjd4TaXK6xokh")
+2
+googledrive::drive_put("obitosInfantis.csv", path = googledrive::as_id(td))
